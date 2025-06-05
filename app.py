@@ -10,18 +10,34 @@ import random
 import requests
 import base64
 import time
+from huggingface_hub import hf_hub_download # Import for downloading files from the Hub
 
 # --- Configuration Constants ---
-SENTIMENT_MODEL_DIR_PATH_CONST = "mbert" 
-MLB_FILENAME_PATH_CONST = "mlb.joblib"
-EMOTION_RULES_CSV_FILE_PATH_CONST = "EmotionsWithFeatures.csv" 
-SONGS_DATABASE_CSV_FILE_PATH_CONST = "MusicsUpdated.csv" 
+# Replace with YOUR Hugging Face Hub identifiers
+# For the model (which includes tokenizer and mlb.joblib)
+SENTIMENT_MODEL_HF_ID_CONST = "yarlspace/mbert" # Your_HF_Username/Your_Model_Repo_Name
+MLB_FILENAME_IN_REPO_CONST = "mlb.joblib"    # The filename of your MLB file within the model repo
+
+# For your datasets (CSVs)
+DATASET_HF_ID_CONST = "yarlspace/forMusic" # Your_HF_Username/Your_Dataset_Repo_Name
+EMOTION_RULES_FILENAME_IN_DATASET_CONST = "EmotionsWithFeatures.csv"
+SONGS_DATABASE_FILENAME_IN_DATASET_CONST = "MusicsUpdated.csv"
 
 # --- Spotify API Credentials (Hardcoded as per user's script) ---
-# WARNING: For actual deployment, these should be moved to Hugging Face Space Secrets
-# and accessed via os.environ.get("YOUR_SECRET_NAME")
 CLIENT_ID_VAL = '0af487b64b5f4865b451cc6ab2269327'
 CLIENT_SECRET_VAL = 'd68a84bc64bc402caf48296e29293bfa'
+
+# --- Global Variables for loaded objects ---
+sentiment_tokenizer = None
+sentiment_model = None
+mlb_object = None 
+device = None
+emotion_rules_df = None 
+songs_df = None 
+is_initialized = False
+_spotify_access_token_cache = None
+_spotify_token_expiry_time_cache = 0
+
 
 class SpotifyAuthenticator:
     """Handles Spotify API token generation."""
@@ -30,7 +46,7 @@ class SpotifyAuthenticator:
         self.client_secret = client_secret
         self.access_token = None
         self.token_expiry_time = 0
-        # print("SpotifyAuthenticator initialized.") # Less verbose for deployment
+        # print("SpotifyAuthenticator initialized.") 
 
     def get_token(self):
         if self.access_token and time.time() < self.token_expiry_time - 300: 
@@ -67,9 +83,10 @@ class SpotifyAuthenticator:
 
 class SentimentPipeline:
     """Handles sentiment model loading, text cleaning, and emotion prediction."""
-    def __init__(self, model_dir_path, mlb_filename):
-        self.model_dir_path = model_dir_path
-        self.mlb_filename = mlb_filename
+    # Updated to take Hugging Face Model ID and the filename of MLB within that repo
+    def __init__(self, model_hf_id, mlb_filename_in_repo):
+        self.model_hf_id = model_hf_id
+        self.mlb_filename_in_repo = mlb_filename_in_repo
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.tokenizer = None
         self.model = None
@@ -78,22 +95,27 @@ class SentimentPipeline:
         print(f"SentimentPipeline initialized. Using device: {self.device}")
 
     def _load_model(self):
-        mlb_path_full = os.path.join(self.model_dir_path, self.mlb_filename)
         try:
-            if not os.path.isdir(self.model_dir_path): 
-                raise FileNotFoundError(f"Sentiment model directory not found: ./{self.model_dir_path}")
-            if not os.path.exists(mlb_path_full): 
-                raise FileNotFoundError(f"MLB file not found: ./{mlb_path_full}")
-
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_dir_path)
-            self.model = AutoModelForSequenceClassification.from_pretrained(self.model_dir_path).to(self.device)
+            print(f"Loading tokenizer and model from Hugging Face Hub: {self.model_hf_id}")
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_hf_id)
+            self.model = AutoModelForSequenceClassification.from_pretrained(self.model_hf_id).to(self.device)
             self.model.eval()
-            self.mlb_object = joblib.load(mlb_path_full)
-            print(f"Sentiment components loaded from ./{self.model_dir_path}.")
+            print("Tokenizer and model loaded.")
+
+            print(f"Downloading MLB file '{self.mlb_filename_in_repo}' from repo '{self.model_hf_id}'...")
+            # Download the mlb.joblib file from the model repository
+            mlb_local_path = hf_hub_download(
+                repo_id=self.model_hf_id,
+                filename=self.mlb_filename_in_repo # e.g., "mlb.joblib"
+            )
+            self.mlb_object = joblib.load(mlb_local_path)
+            print(f"MLB object loaded from downloaded file: {mlb_local_path}")
+            
+            print(f"Sentiment components loaded successfully from Hugging Face Hub: {self.model_hf_id}")
             if self.model.config.num_labels != len(self.mlb_object.classes_):
                  print(f"CRITICAL WARNING: Model labels ({self.model.config.num_labels}) != MLB classes ({len(self.mlb_object.classes_)}).")
         except Exception as e:
-            print(f"FATAL: Error loading sentiment components: {e}")
+            print(f"FATAL: Error loading sentiment components from Hugging Face Hub: {e}")
             raise 
 
     def clean_text(self, text):
@@ -155,9 +177,11 @@ class SentimentPipeline:
 
 class MusicDatabase:
     """Loads and manages music rules and song features."""
-    def __init__(self, emotion_rules_path, songs_db_path):
-        self.emotion_rules_path = emotion_rules_path
-        self.songs_db_path = songs_db_path
+    # Updated to take Hugging Face Dataset ID and filenames within that dataset
+    def __init__(self, dataset_hf_id, emotion_rules_filename, songs_db_filename):
+        self.dataset_hf_id = dataset_hf_id
+        self.emotion_rules_filename = emotion_rules_filename
+        self.songs_db_filename = songs_db_filename
         self.emotion_rules_df = None
         self.songs_df = None
         self._load_data()
@@ -165,19 +189,27 @@ class MusicDatabase:
 
     def _load_data(self):
         try:
-            if not os.path.exists(self.emotion_rules_path): 
-                raise FileNotFoundError(f"Emotion rules CSV not found: ./{self.emotion_rules_path}")
-            self.emotion_rules_df = pd.read_csv(self.emotion_rules_path)
-            print(f"Emotion rules loaded from ./{self.emotion_rules_path}. Shape: {self.emotion_rules_df.shape}")
+            print(f"Downloading emotion rules '{self.emotion_rules_filename}' from dataset '{self.dataset_hf_id}'...")
+            emotion_rules_local_path = hf_hub_download(
+                repo_id=self.dataset_hf_id,
+                filename=self.emotion_rules_filename,
+                repo_type="dataset" 
+            )
+            self.emotion_rules_df = pd.read_csv(emotion_rules_local_path)
+            print(f"Emotion rules loaded from Hub. Shape: {self.emotion_rules_df.shape}")
         except Exception as e:
-            print(f"FATAL: Error loading emotion rules: {e}")
+            print(f"FATAL: Error loading emotion rules from Hub: {e}")
             raise RuntimeError(f"Failed to load emotion rules: {e}") from e
 
         try:
-            if not os.path.exists(self.songs_db_path): 
-                raise FileNotFoundError(f"Songs database CSV not found: ./{self.songs_db_path}")
-            self.songs_df = pd.read_csv(self.songs_db_path)
-            print(f"Songs database loaded from ./{self.songs_db_path}. Shape: {self.songs_df.shape}")
+            print(f"Downloading songs database '{self.songs_db_filename}' from dataset '{self.dataset_hf_id}'...")
+            songs_db_local_path = hf_hub_download(
+                repo_id=self.dataset_hf_id,
+                filename=self.songs_db_filename,
+                repo_type="dataset"
+            )
+            self.songs_df = pd.read_csv(songs_db_local_path)
+            print(f"Songs database loaded from Hub. Shape: {self.songs_df.shape}")
             
             audio_feature_columns = ['danceability', 'energy', 'key', 'loudness', 'mode', 
                                      'speechiness', 'acousticness', 'instrumentalness', 
@@ -197,7 +229,7 @@ class MusicDatabase:
             else:
                 self.songs_df['popularity'].fillna(0, inplace=True)
         except Exception as e:
-            print(f"FATAL: Error loading or processing songs database: {e}")
+            print(f"FATAL: Error loading or processing songs database from Hub: {e}")
             raise RuntimeError(f"Failed to load or process songs database: {e}") from e
 
     def get_emotion_rule(self, emotion_string):
@@ -210,6 +242,7 @@ class MusicDatabase:
 
 
 class MusicRecommender:
+    # ... (This class remains the same as before) ...
     """Recommends music based on emotions and feature rules."""
     def __init__(self, music_db_service, spotify_auth_service=None):
         self.music_db = music_db_service
@@ -228,7 +261,7 @@ class MusicRecommender:
         
         # This calls the global get_tracks_popularity function.
         # For purer OOP, this logic would ideally be part of the SpotifyAuthenticator class.
-        if 'get_tracks_popularity' in globals():
+        if 'get_tracks_popularity' in globals(): # Check if the standalone function is available
             return get_tracks_popularity(track_ids, token) 
         else:
             print("Warning: Global get_tracks_popularity function not found for live fetch.")
@@ -316,10 +349,11 @@ class GradioApp:
     def __init__(self):
         print("Initializing GradioApp...")
         self.spotify_authenticator = SpotifyAuthenticator(CLIENT_ID_VAL, CLIENT_SECRET_VAL) 
-        self.sentiment_pipeline = SentimentPipeline(SENTIMENT_MODEL_DIR_PATH_CONST, MLB_FILENAME_PATH_CONST)
-        self.music_database = MusicDatabase(EMOTION_RULES_CSV_FILE_PATH_CONST, SONGS_DATABASE_CSV_FILE_PATH_CONST)
+        # Pass the Hugging Face Hub identifiers to the pipeline and database classes
+        self.sentiment_pipeline = SentimentPipeline(SENTIMENT_MODEL_HF_ID_CONST, MLB_FILENAME_IN_REPO_CONST)
+        self.music_database = MusicDatabase(DATASET_HF_ID_CONST, EMOTION_RULES_FILENAME_IN_DATASET_CONST, SONGS_DATABASE_FILENAME_IN_DATASET_CONST)
         self.music_recommender = MusicRecommender(self.music_database, self.spotify_authenticator)
-        self.is_app_initialized = True
+        self.is_app_initialized = True # Should be set after all components are truly initialized
         print("GradioApp fully initialized.")
 
 
@@ -354,58 +388,58 @@ class GradioApp:
         return emotion_analysis_output, recommended_songs_df
 
     def launch(self):
-        css_app_spotify_light = """
-        .gradio-container { 
-            background-color: #323232 !important;
+        css_app_dark_red_theme = """
+        body {
+            background-color: darkred !important; /* Dark red background for the entire page */
             font-family: 'CircularSp', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            margin: 0; 
+            padding: 0; 
+            min-height: 100vh; 
+        }
+        .gradio-container { 
+            background-color: #FFFFFF !important; /* Main content area is white for black text */
+            color: #191414 !important; /* Default text color for container content to black */
             max-width: 850px; 
-            margin: auto;
-            color: #bb3e3e !important;
+            margin: 30px auto !important; 
+            border-radius: 12px; 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25) !important; /* Slightly stronger shadow for contrast */
         }
         .gr-panel { 
             border-radius: 8px !important; 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important; 
             padding: 20px !important; 
             margin-bottom: 20px !important; 
-            background-color: #FFFFFF !important;
-            border: 1px solid #E0E0E0 !important;
+            background-color: #FFFFFF !important; 
+            border: 1px solid #DDD !important; /* Lighter border for panels */
         }
 
-        /* Primary Submit Button - Spotify Green */
-        .gradio-app button.gr-button.lg.primary.svelte-cmf5ev,
-        button.gr-button.lg.primary.svelte-cmf5ev { 
+        .gradio-app button.gr-button.lg.primary.svelte-cmf5ev, button.gr-button.lg.primary.svelte-cmf5ev { 
             background-color: #1DB954 !important; 
-            color: #FFFFFF !important; 
+            color: white !important; 
             border-radius: 500px !important;
             font-weight: 700 !important; 
             padding: 10px 24px !important; 
             border: none !important;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            transition: background-color 0.2s ease;
         }
-        .gradio-app button.gr-button.lg.primary.svelte-cmf5ev:hover,
-        button.gr-button.lg.primary.svelte-cmf5ev:hover {
+        .gradio-app button.gr-button.lg.primary.svelte-cmf5ev:hover, button.gr-button.lg.primary.svelte-cmf5ev:hover {
             background-color: #1ED760 !important;
         }
-
-        /* Secondary Button - White background with Green border */
         .gradio-app button.gr-button.lg.secondary.svelte-cmf5ev,
         button.gr-button.sm.secondary.svelte-cmf5ev { 
-            background-color: #FFFFFF !important; 
-            color: #1DB954 !important;
-            border: 2px solid #1DB954 !important;
+            background-color: #EFEFEF !important; 
+            color: #191414 !important; /* Black text on light grey button */
+            border: 1px solid #DCDCDC !important;
             border-radius: 500px !important;
             font-weight: 700 !important; 
             padding: 10px 24px !important; 
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            transition: background-color 0.2s ease, color 0.2s ease;
         }
         .gradio-app button.gr-button.lg.secondary.svelte-cmf5ev:hover,
         button.gr-button.sm.secondary.svelte-cmf5ev:hover {
-            background-color: #1DB954 !important;
-            color: #FFFFFF !important;
+            background-color: #DCDCDC !important;
         }
 
         .gr-input textarea { 
@@ -413,10 +447,9 @@ class GradioApp:
             border: 1px solid #B3B3B3 !important; 
             padding: 12px !important; 
             font-size: 1rem; 
-            color: #191414 !important;
+            color: #191414 !important; /* Black text */
             background-color: #FFFFFF !important;
         }
-
         .gr-markdown { 
             padding: 15px; 
             border-radius: 8px; 
@@ -424,72 +457,19 @@ class GradioApp:
             margin-top: 20px;
             border: 1px solid #E0E0E0 !important;
         }
-        .gr-markdown p, .gr-markdown li {
-            margin-bottom: 0.5em !important; 
-            line-height: 1.6; 
-            color: #191414 !important;
-        }
-        .gr-markdown strong {
-            color: #1DB954 !important;
-        }
+        .gr-markdown p, .gr-markdown li { color: #191414 !important; } /* Black text */
+        .gr-markdown strong { color: #191414 !important; }
 
-        .gr-dataframe {
-            border-radius: 8px !important; 
-            box-shadow: none; 
-            margin-top: 20px; 
-            border: 1px solid #E0E0E0 !important;
-        }
-        .gr-dataframe table { border-collapse: separate; border-spacing: 0; width:100%; }
-        .gr-dataframe th {
-            background-color: #F0F0F0 !important; 
-            color: #191414 !important; 
-            font-weight: 600; 
-            text-align: left; 
-            padding: 10px 12px !important; 
-            border-bottom: 1px solid #DCDCDC !important;
-        }
-        .gr-dataframe td {
-            padding: 10px 12px !important; 
-            border-bottom: 1px solid #EFEFEF; 
-            color: #191414 !important;
-        }
-        .gr-dataframe tr:last-child td { border-bottom: none; }
-
-        h1.gr-title {
-            color: #191414 !important; 
-            text-align: center; 
-            font-size: 2rem; 
-            font-weight: 700; 
-            margin-bottom: 0.5rem !important;
-        }
-        .gr-description {
-            color: #535353 !important; 
-            text-align: center; 
-            margin-bottom: 25px !important; 
-            font-size: 1rem; 
-            line-height: 1.5;
-        }
+        .gr-dataframe { border-radius: 8px !important; margin-top: 20px; border: 1px solid #E0E0E0 !important;}
+        .gr-dataframe th { background-color: #F0F0F0 !important; color: #191414 !important;} /* Black text */
+        .gr-dataframe td { color: #191414 !important;} /* Black text */
+        
+        h1.gr-title { color: #191414 !important; /* Black title on white container bg */ }
+        .gr-description { color: #535353 !important; /* Dark grey description on white container bg */ }
         footer { visibility: hidden !important; }
-
-        .gr-examples {
-            padding: 15px; 
-            background-color: #FFFFFF; 
-            border-radius: 8px; 
-            border: 1px solid #E0E0E0; 
-            margin-top: 15px;
-        }
-        .gr-examples-label span {
-            color: #191414 !important; 
-            font-weight: 600;
-        }
-        .gr-example-inputs { padding: 5px 0px !important; }
-
-        #emotion_prob_label {
-            font-weight: bold; 
-            margin-bottom: 5px; 
-            color: #1DB954;
-        }
-
+        .gr-examples { background-color: #FFFFFF; border: 1px solid #E0E0E0;}
+        .gr-examples-label span { color: #191414 !important; }
+        #emotion_prob_label { color: #191414; } /* Black text */
         .gr-input > label > span.label-text,
         .gr-output > label > span.label-text,
         .gr-markdown > label > span.label-text,
@@ -498,9 +478,21 @@ class GradioApp:
             font-weight: 600 !important;
         }
         """
-
         
-        with gr.Blocks(theme=gr.themes.Base(), css=css_app_spotify_light) as demo: # Use Base theme and override with CSS
+        # Define headers for the DataFrame output component dynamically at the point of Interface creation
+        # This needs self.music_database to be initialized, so call initialize_app if not done
+        if not self.is_app_initialized: # Should have been called by __init__
+            print("Warning: GradioApp launch method called before full initialization. Forcing init.")
+            self.__init__() # Re-initialize to ensure music_database is loaded
+
+        df_output_headers_for_interface = ['Track Name', 'Artists']
+        # It's safer to check if music_database and its songs_df are loaded before accessing columns
+        if hasattr(self, 'music_database') and self.music_database.songs_df is not None and \
+           'popularity' in self.music_database.songs_df.columns:
+            df_output_headers_for_interface.append('Popularity')
+
+
+        with gr.Blocks(theme=gr.themes.Base(), css=css_app_dark_red_theme) as demo: 
             gr.Markdown("🎤 Sentiment-Driven Multilingual Music Recommender 🎧", elem_classes="gr-title") 
             gr.Markdown(
                 "Enter text in English, Russian, or Kazakh. Use [EN], [RU], [KZ] tags for best results. " 
@@ -519,8 +511,7 @@ class GradioApp:
                     label="Your text:" 
                 )
                 with gr.Row(): 
-                    # Ensure Gradio uses the 'secondary' variant for ClearButton if available, or rely on general .gr-button for styling
-                    clear_button = gr.ClearButton(value="Clear", components=[text_input], variant="secondary") # Attempt to use secondary variant
+                    clear_button = gr.ClearButton(value="Clear", components=[text_input], variant="secondary") 
                     submit_button = gr.Button("Submit", variant="primary")
                 
                 examples_component = gr.Examples( 
@@ -540,11 +531,11 @@ class GradioApp:
                 emotion_output_markdown = gr.Markdown() 
                 
                 recommendation_df_output = gr.DataFrame(
-                    headers=['Track Name', 'Artists'], 
+                    headers=df_output_headers_for_interface, 
                     label="🎵 Music Recommendations", 
                     wrap=True, 
                     row_count=(10,"dynamic"), 
-                    col_count=(2,"fixed") 
+                    col_count=(len(df_output_headers_for_interface),"fixed") 
                 )
 
             submit_button.click(
@@ -552,10 +543,11 @@ class GradioApp:
                 inputs=[text_input],
                 outputs=[emotion_output_markdown, recommendation_df_output]
             )
-            clear_button.add(components=[emotion_output_markdown, recommendation_df_output]) # Clear outputs too
+            clear_button.add(components=[emotion_output_markdown, recommendation_df_output])
 
         demo.launch()
 
 if __name__ == '__main__':
+    # The GradioApp __init__ method now calls initialize_app() internally.
     app = GradioApp() 
     app.launch()      
