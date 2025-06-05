@@ -10,16 +10,13 @@ import random
 import requests
 import base64
 import time
-from huggingface_hub import hf_hub_download # Import for downloading files from the Hub
+from huggingface_hub import hf_hub_download 
 
 # --- Configuration Constants ---
-# Replace with YOUR Hugging Face Hub identifiers
-# For the model (which includes tokenizer and mlb.joblib)
-SENTIMENT_MODEL_HF_ID_CONST = "yarlspace/mbert" # Your_HF_Username/Your_Model_Repo_Name
-MLB_FILENAME_IN_REPO_CONST = "mlb.joblib"    # The filename of your MLB file within the model repo
+SENTIMENT_MODEL_HF_ID_CONST = "yarlspace/mbert" 
+MLB_FILENAME_IN_REPO_CONST = "mlb.joblib"    
 
-# For your datasets (CSVs)
-DATASET_HF_ID_CONST = "yarlspace/forMusic" # Your_HF_Username/Your_Dataset_Repo_Name
+DATASET_HF_ID_CONST = "yarlspace/forMusic" 
 EMOTION_RULES_FILENAME_IN_DATASET_CONST = "EmotionsWithFeatures.csv"
 SONGS_DATABASE_FILENAME_IN_DATASET_CONST = "MusicsUpdated.csv"
 
@@ -83,8 +80,7 @@ class SpotifyAuthenticator:
 
 class SentimentPipeline:
     """Handles sentiment model loading, text cleaning, and emotion prediction."""
-    # Updated to take Hugging Face Model ID and the filename of MLB within that repo
-    def __init__(self, model_hf_id, mlb_filename_in_repo):
+    def __init__(self, model_hf_id, mlb_filename_in_repo): 
         self.model_hf_id = model_hf_id
         self.mlb_filename_in_repo = mlb_filename_in_repo
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -100,13 +96,12 @@ class SentimentPipeline:
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_hf_id)
             self.model = AutoModelForSequenceClassification.from_pretrained(self.model_hf_id).to(self.device)
             self.model.eval()
-            print("Tokenizer and model loaded.")
+            print("Tokenizer and model loaded from Hub.")
 
             print(f"Downloading MLB file '{self.mlb_filename_in_repo}' from repo '{self.model_hf_id}'...")
-            # Download the mlb.joblib file from the model repository
             mlb_local_path = hf_hub_download(
                 repo_id=self.model_hf_id,
-                filename=self.mlb_filename_in_repo # e.g., "mlb.joblib"
+                filename=self.mlb_filename_in_repo 
             )
             self.mlb_object = joblib.load(mlb_local_path)
             print(f"MLB object loaded from downloaded file: {mlb_local_path}")
@@ -177,7 +172,6 @@ class SentimentPipeline:
 
 class MusicDatabase:
     """Loads and manages music rules and song features."""
-    # Updated to take Hugging Face Dataset ID and filenames within that dataset
     def __init__(self, dataset_hf_id, emotion_rules_filename, songs_db_filename):
         self.dataset_hf_id = dataset_hf_id
         self.emotion_rules_filename = emotion_rules_filename
@@ -221,13 +215,26 @@ class MusicDatabase:
                 else:
                     print(f"Warning: Expected column '{col}' not found in songs_df.")
             
+            if 'name' not in self.songs_df.columns:
+                print("Warning: 'name' column missing in songs_df. Adding default.")
+                self.songs_df['name'] = "Unknown Track"
+            else:
+                self.songs_df['name'] = self.songs_df['name'].fillna("Unknown Track") 
+
+            if 'artists' not in self.songs_df.columns:
+                print("Warning: 'artists' column missing in songs_df. Adding default.")
+                self.songs_df['artists'] = "Unknown Artist"
+            else:
+                self.songs_df['artists'] = self.songs_df['artists'].fillna("Unknown Artist") 
+            
             if 'track_id' not in self.songs_df.columns:
                 print("CRITICAL WARNING: 'track_id' column missing in songs_df.")
             if 'popularity' not in self.songs_df.columns:
                  print("Warning: 'popularity' column is missing in songs_df. Adding default popularity=0.")
                  self.songs_df['popularity'] = 0 
             else:
-                self.songs_df['popularity'].fillna(0, inplace=True)
+                self.songs_df['popularity'] = self.songs_df['popularity'].fillna(0) 
+
         except Exception as e:
             print(f"FATAL: Error loading or processing songs database from Hub: {e}")
             raise RuntimeError(f"Failed to load or process songs database: {e}") from e
@@ -242,7 +249,6 @@ class MusicDatabase:
 
 
 class MusicRecommender:
-    # ... (This class remains the same as before) ...
     """Recommends music based on emotions and feature rules."""
     def __init__(self, music_db_service, spotify_auth_service=None):
         self.music_db = music_db_service
@@ -259,9 +265,7 @@ class MusicRecommender:
             print("Failed to get Spotify token. Cannot fetch live popularity.")
             return {track_id: 0 for track_id in track_ids}
         
-        # This calls the global get_tracks_popularity function.
-        # For purer OOP, this logic would ideally be part of the SpotifyAuthenticator class.
-        if 'get_tracks_popularity' in globals(): # Check if the standalone function is available
+        if 'get_tracks_popularity' in globals():
             return get_tracks_popularity(track_ids, token) 
         else:
             print("Warning: Global get_tracks_popularity function not found for live fetch.")
@@ -269,15 +273,15 @@ class MusicRecommender:
 
 
     def recommend_music(self, predicted_emotions_list, num_recommendations=10, sort_by_popularity=True, use_live_popularity=False):
-        if not predicted_emotions_list: return pd.DataFrame() 
+        if not predicted_emotions_list: return pd.DataFrame(columns=['name', 'artists']) 
         
         primary_emotion = predicted_emotions_list[0].lower()
         rule = self.music_db.get_emotion_rule(primary_emotion)
 
-        if rule is None: return pd.DataFrame()
+        if rule is None: return pd.DataFrame(columns=['name', 'artists'])
 
         current_filter_df = self.music_db.get_all_songs()
-        if current_filter_df.empty: return pd.DataFrame()
+        if current_filter_df.empty: return pd.DataFrame(columns=['name', 'artists'])
 
         audio_features_in_rules = ['danceability', 'energy', 'valence', 'tempo', 'loudness', 'mode',
                                    'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'time_signature']
@@ -301,27 +305,15 @@ class MusicRecommender:
                         current_filter_df = current_filter_df[(current_filter_df[feature] >= min_val) & (current_filter_df[feature] <= max_val)]
         
         if current_filter_df.empty:
-            return pd.DataFrame()
+            return pd.DataFrame(columns=['name', 'artists'])
 
         if sort_by_popularity:
             if use_live_popularity and 'track_id' in current_filter_df.columns and self.spotify_auth and CLIENT_ID_VAL and CLIENT_SECRET_VAL:
-                print("Attempting to fetch LIVE Spotify popularity...")
-                track_ids_to_fetch = current_filter_df['track_id'].dropna().unique().tolist()
-                MAX_POPULARITY_FETCH = 50 
-                ids_for_popularity = track_ids_to_fetch
-                if len(track_ids_to_fetch) > MAX_POPULARITY_FETCH:
-                    ids_for_popularity = random.sample(track_ids_to_fetch, MAX_POPULARITY_FETCH)
-                
-                if ids_for_popularity:
-                    live_popularities = self._get_spotify_tracks_popularity(ids_for_popularity)
-                    current_filter_df['live_popularity'] = current_filter_df['track_id'].map(live_popularities).fillna(0)
-                    current_filter_df.sort_values(by='live_popularity', ascending=False, inplace=True)
-                    if 'popularity' not in current_filter_df.columns: 
-                        current_filter_df['popularity'] = current_filter_df['live_popularity']
+                pass 
             elif 'popularity' in current_filter_df.columns and pd.api.types.is_numeric_dtype(current_filter_df['popularity']):
-                current_filter_df.sort_values(by='popularity', ascending=False, inplace=True)
+                current_filter_df = current_filter_df.sort_values(by='popularity', ascending=False) 
             else:
-                print("Warning: Cannot sort by popularity. 'popularity' column missing, not numeric, or live fetch disabled/failed.")
+                print("Warning: Cannot sort by popularity. 'popularity' column missing or not numeric.")
                 if 'popularity' not in current_filter_df.columns:
                     current_filter_df['popularity'] = 0 
         else: 
@@ -331,17 +323,21 @@ class MusicRecommender:
         num_to_sample = min(num_recommendations, len(current_filter_df))
         recommended_sample = current_filter_df.head(num_to_sample) if num_to_sample > 0 else pd.DataFrame()
         
-        display_cols = ['name', 'artists'] 
+        output_df = pd.DataFrame(columns=['Track Name', 'Artists'])
+        if not recommended_sample.empty:
+            temp_df = pd.DataFrame()
+            if 'name' in recommended_sample.columns:
+                temp_df['Track Name'] = recommended_sample['name']
+            else:
+                temp_df['Track Name'] = "N/A"
             
-        final_display_cols = [col for col in display_cols if col in recommended_sample.columns]
-        if not final_display_cols and not recommended_sample.empty: 
-            final_display_cols = recommended_sample.columns.tolist()[:2] 
-
-        recommendations_to_display = recommended_sample[final_display_cols].copy() if final_display_cols and not recommended_sample.empty else pd.DataFrame()
-        if not recommendations_to_display.empty:
-            recommendations_to_display.rename(columns={'name': 'Track Name', 'artists': 'Artists'}, inplace=True)
+            if 'artists' in recommended_sample.columns:
+                temp_df['Artists'] = recommended_sample['artists']
+            else:
+                temp_df['Artists'] = "N/A"
+            output_df = temp_df
         
-        return recommendations_to_display
+        return output_df
 
 
 class GradioApp:
@@ -349,11 +345,10 @@ class GradioApp:
     def __init__(self):
         print("Initializing GradioApp...")
         self.spotify_authenticator = SpotifyAuthenticator(CLIENT_ID_VAL, CLIENT_SECRET_VAL) 
-        # Pass the Hugging Face Hub identifiers to the pipeline and database classes
         self.sentiment_pipeline = SentimentPipeline(SENTIMENT_MODEL_HF_ID_CONST, MLB_FILENAME_IN_REPO_CONST)
         self.music_database = MusicDatabase(DATASET_HF_ID_CONST, EMOTION_RULES_FILENAME_IN_DATASET_CONST, SONGS_DATABASE_FILENAME_IN_DATASET_CONST)
         self.music_recommender = MusicRecommender(self.music_database, self.spotify_authenticator)
-        self.is_app_initialized = True # Should be set after all components are truly initialized
+        self.is_app_initialized = True
         print("GradioApp fully initialized.")
 
 
@@ -388,166 +383,139 @@ class GradioApp:
         return emotion_analysis_output, recommended_songs_df
 
     def launch(self):
-        css_app_dark_red_theme = """
+        css_app_dark_theme = """
         body {
-            background-color: darkred !important; /* Dark red background for the entire page */
-            font-family: 'CircularSp', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            margin: 0; 
-            padding: 0; 
-            min-height: 100vh; 
+            background-image: url('image.jpg') !important; /* !! REPLACE WITH YOUR IMAGE URL !! */
+            background-size: cover !important;
+            background-position: center center !important;
+            background-repeat: no-repeat !important;
+            background-attachment: fixed !important;
         }
         .gradio-container { 
-            background-color: #FFFFFF !important; /* Main content area is white for black text */
-            color: #191414 !important; /* Default text color for container content to black */
+            background-color: rgba(0, 0, 0, 0.8) !important; /* Semi-transparent black container */
+            color: #FFFFFF !important; /* Default text color to white */
             max-width: 850px; 
             margin: 30px auto !important; 
             border-radius: 12px; 
-            box-shadow: 0 8px 20px rgba(0,0,0,0.25) !important; /* Slightly stronger shadow for contrast */
+            border: 1px solid #444;
         }
         .gr-panel { 
-            border-radius: 8px !important; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important; 
-            padding: 20px !important; 
-            margin-bottom: 20px !important; 
-            background-color: #FFFFFF !important; 
-            border: 1px solid #DDD !important; /* Lighter border for panels */
+            background-color: #282828 !important; /* Dark grey for panels */
+            border-color: #444 !important;
+            box-shadow: none !important;
         }
 
-        .gradio-app button.gr-button.lg.primary.svelte-cmf5ev, button.gr-button.lg.primary.svelte-cmf5ev { 
+        button.gr-button.lg.primary { /* More specific selector for primary submit */
             background-color: #1DB954 !important; 
             color: white !important; 
-            border-radius: 500px !important;
-            font-weight: 700 !important; 
-            padding: 10px 24px !important; 
-            border: none !important;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
         }
-        .gradio-app button.gr-button.lg.primary.svelte-cmf5ev:hover, button.gr-button.lg.primary.svelte-cmf5ev:hover {
-            background-color: #1ED760 !important;
+        button.gr-button.lg.secondary { 
+            background-color: #535353 !important; /* Darker grey */
+            color: white !important; 
+            border-color: #777 !important;
         }
-        .gradio-app button.gr-button.lg.secondary.svelte-cmf5ev,
-        button.gr-button.sm.secondary.svelte-cmf5ev { 
-            background-color: #EFEFEF !important; 
-            color: #191414 !important; /* Black text on light grey button */
-            border: 1px solid #DCDCDC !important;
-            border-radius: 500px !important;
-            font-weight: 700 !important; 
-            padding: 10px 24px !important; 
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+        /* Ensuring specificity for example buttons if they differ */
+        .gr-example-inputs button { 
+            background-color: #535353 !important; 
+            color: #FFFFFF !important; 
+            border: 1px solid #777 !important;
         }
-        .gradio-app button.gr-button.lg.secondary.svelte-cmf5ev:hover,
-        button.gr-button.sm.secondary.svelte-cmf5ev:hover {
-            background-color: #DCDCDC !important;
-        }
+        .gr-example-inputs button:hover { background-color: #636363 !important; }
+
 
         .gr-input textarea { 
-            border-radius: 6px !important; 
-            border: 1px solid #B3B3B3 !important; 
-            padding: 12px !important; 
-            font-size: 1rem; 
-            color: #191414 !important; /* Black text */
-            background-color: #FFFFFF !important;
+            background-color: #3E3E3E !important; 
+            color: #FFFFFF !important; /* White text for input */
+            border-color: #535353 !important;
         }
         .gr-markdown { 
-            padding: 15px; 
-            border-radius: 8px; 
-            background-color: #FFFFFF !important; 
-            margin-top: 20px;
-            border: 1px solid #E0E0E0 !important;
+            background-color: transparent !important; 
+            border: none !important;
         }
-        .gr-markdown p, .gr-markdown li { color: #191414 !important; } /* Black text */
-        .gr-markdown strong { color: #191414 !important; }
-
-        .gr-dataframe { border-radius: 8px !important; margin-top: 20px; border: 1px solid #E0E0E0 !important;}
-        .gr-dataframe th { background-color: #F0F0F0 !important; color: #191414 !important;} /* Black text */
-        .gr-dataframe td { color: #191414 !important;} /* Black text */
+        .gr-markdown p, .gr-markdown li, .gr-markdown strong { 
+            color: #FFFFFF !important; /* White text */
+        }
         
-        h1.gr-title { color: #191414 !important; /* Black title on white container bg */ }
-        .gr-description { color: #535353 !important; /* Dark grey description on white container bg */ }
+        .gr-dataframe { border: 1px solid #444 !important; background-color: #282828 !important;}
+        .gr-dataframe th { background-color: #3E3E3E !important; color: #FFFFFF !important; }
+        .gr-dataframe td { color: #DCDCDC !important; border-color: #444 !important;} 
+        
+        h1.gr-title { color: #FFFFFF !important; text-align: center; }
+        .gr-description { color: #B3B3B3 !important; text-align: center; }
         footer { visibility: hidden !important; }
-        .gr-examples { background-color: #FFFFFF; border: 1px solid #E0E0E0;}
-        .gr-examples-label span { color: #191414 !important; }
-        #emotion_prob_label { color: #191414; } /* Black text */
+        .gr-examples { background-color: transparent; border: none; }
+        .gr-examples-label span { color: #FFFFFF !important; font-weight: 600; }
+
+
+        #emotion_prob_label { color: #FFFFFF !important; font-weight: bold; } 
         .gr-input > label > span.label-text,
         .gr-output > label > span.label-text,
         .gr-markdown > label > span.label-text,
         .gr-dataframe > label > span.label-text {
-            color: #191414 !important; 
-            font-weight: 600 !important;
+            color: #FFFFFF !important; font-weight: 600 !important;
         }
         """
         
-        # Define headers for the DataFrame output component dynamically at the point of Interface creation
-        # This needs self.music_database to be initialized, so call initialize_app if not done
-        if not self.is_app_initialized: # Should have been called by __init__
-            print("Warning: GradioApp launch method called before full initialization. Forcing init.")
-            self.__init__() # Re-initialize to ensure music_database is loaded
-
-        df_output_headers_for_interface = ['Track Name', 'Artists']
-        # It's safer to check if music_database and its songs_df are loaded before accessing columns
-        if hasattr(self, 'music_database') and self.music_database.songs_df is not None and \
-           'popularity' in self.music_database.songs_df.columns:
-            df_output_headers_for_interface.append('Popularity')
-
-
-        with gr.Blocks(theme=gr.themes.Base(), css=css_app_dark_red_theme) as demo: 
-            gr.Markdown("🎤 Sentiment-Driven Multilingual Music Recommender 🎧", elem_classes="gr-title") 
+        with gr.Blocks(theme=gr.themes.Base(), css=css_app_dark_theme) as demo: 
+            # Removed the gr.Row wrapping the title for simpler vertical stacking
+            gr.Markdown("<h1>🎤 Sentiment-Driven Multilingual Music Recommender 🎧</h1>", elem_classes="gr-title") 
             gr.Markdown(
                 "Enter text in English, Russian, or Kazakh. Use [EN], [RU], [KZ] tags for best results. " 
-                "The system predicts emotions and recommends songs based on audio feature rules. \n"
+                "The system predicts emotions and recommends songs based on audio feature rules. <br>" # Added line breaks for readability
                 "Ағылшын, орыс немесе қазақ тілдерінде мәтін енгізіңіз. Үздік нәтиже үшін [EN], [RU], [KZ] тегтерін қолданыңыз. "
-                "Жүйе эмоцияларды анықтап, әндерді ұсынады. \n"
+                "Жүйе эмоцияларды анықтап, әндерді ұсынады. <br>"
                 "Введите текст на английском, русском или казахском языке. Для лучших результатов используйте теги [EN], [RU], [KZ]. "
                 "Система определит эмоции и порекомендует песни.",
                 elem_classes="gr-description"
             )
 
-            with gr.Column(): 
-                text_input = gr.Textbox(
-                    lines=4, 
-                    placeholder="E.g., '[EN] I'm so happy today!' or '[RU] Мне очень грустно.' or '[KZ] Көңіл-күйім тамаша!'...", 
-                    label="Your text:" 
-                )
-                with gr.Row(): 
-                    clear_button = gr.ClearButton(value="Clear", components=[text_input], variant="secondary") 
-                    submit_button = gr.Button("Submit", variant="primary")
-                
-                examples_component = gr.Examples( 
-                    examples=[
-                        ["[EN] I feel ecstatic and overjoyed by this news!"],
-                        ["[RU] Это очень печально и вызывает у меня тревогу."],
-                        ["[KZ] Бүгін менің көңіл-күйім тамаша, жаңа ән тыңдағым келеді!"],
-                        ["I am feeling quite down and disappointed."],
-                        ["[RU] Какая прекрасная погода, хочется гулять и слушать музыку!"],
-                        ["[KZ] Мен қатты шаршадым, біраз демалғым келеді."]
-                    ],
-                    inputs=[text_input],
-                    label="Examples:" 
-                )
-                
-                gr.Markdown("### Emotion Probabilities:", elem_id="emotion_prob_label") 
-                emotion_output_markdown = gr.Markdown() 
-                
-                recommendation_df_output = gr.DataFrame(
-                    headers=df_output_headers_for_interface, 
-                    label="🎵 Music Recommendations", 
-                    wrap=True, 
-                    row_count=(10,"dynamic"), 
-                    col_count=(len(df_output_headers_for_interface),"fixed") 
-                )
+            # All components will now stack vertically by default within the main Blocks context
+            text_input = gr.Textbox(
+                lines=4, 
+                placeholder="E.g., '[EN] I'm so happy today!' or '[RU] Мне очень грустно.' or '[KZ] Көңіл-күйім тамаша!'...", 
+                label="Your text:" 
+            )
+            with gr.Row(): # Keep buttons in a row
+                clear_button = gr.ClearButton(value="Clear", variant="secondary") 
+                submit_button = gr.Button("Submit", variant="primary")
+            
+            gr.Examples( 
+                examples=[
+                    ["[EN] I feel ecstatic and overjoyed by this news!"],
+                    ["[RU] Это очень печально и вызывает у меня тревогу."],
+                    ["[KZ] Бүгін менің көңіл-күйім тамаша, жаңа ән тыңдағым келеді!"],
+                    ["I am feeling quite down and disappointed."],
+                    ["[RU] Какая прекрасная погода, хочется гулять и слушать музыку!"],
+                    ["[KZ] Мен қатты шаршадым, біраз демалғым келеді."]
+                ],
+                inputs=[text_input],
+                label="... Examples:" 
+            )
+            
+            # emotion_output_markdown = gr.Markdown(label="Emotion Analysis") # Label from image
+            gr.Markdown("### Emotion Probabilities:", elem_id="emotion_prob_label") # Label from image for this section
+            emotion_output_markdown = gr.Markdown() # No label, content will provide "Emotion Probabilities:"
 
+            
+            recommendation_df_output = gr.DataFrame(
+                headers=['Track Name', 'Artists'], 
+                label="🎵 Music Recommendations", 
+                wrap=True, 
+                row_count=(10,"dynamic"), 
+                col_count=(2,"fixed") 
+            )
+ 
             submit_button.click(
                 fn=self.get_recommendations_interface,
                 inputs=[text_input],
                 outputs=[emotion_output_markdown, recommendation_df_output]
             )
-            clear_button.add(components=[emotion_output_markdown, recommendation_df_output])
+            # Make clear button also clear the outputs
+            clear_button.click(lambda: (None, pd.DataFrame(columns=['Track Name', 'Artists'])), outputs=[emotion_output_markdown, recommendation_df_output])
+
 
         demo.launch()
 
 if __name__ == '__main__':
-    # The GradioApp __init__ method now calls initialize_app() internally.
     app = GradioApp() 
     app.launch()      
