@@ -12,7 +12,6 @@ import base64
 import time
 from huggingface_hub import hf_hub_download 
 
-# --- Configuration Constants ---
 SENTIMENT_MODEL_HF_ID_CONST = "yarlspace/mbert" 
 MLB_FILENAME_IN_REPO_CONST = "mlb.joblib"    
 
@@ -20,11 +19,9 @@ DATASET_HF_ID_CONST = "yarlspace/forMusic"
 EMOTION_RULES_FILENAME_IN_DATASET_CONST = "EmotionsWithFeatures.csv"
 SONGS_DATABASE_FILENAME_IN_DATASET_CONST = "MusicsUpdated.csv"
 
-# --- Spotify API Credentials (Hardcoded as per user's script) ---
 CLIENT_ID_VAL = '0af487b64b5f4865b451cc6ab2269327'
 CLIENT_SECRET_VAL = 'd68a84bc64bc402caf48296e29293bfa'
 
-# --- Global Variables for loaded objects ---
 sentiment_tokenizer = None
 sentiment_model = None
 mlb_object = None 
