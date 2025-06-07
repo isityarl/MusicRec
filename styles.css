@@ -1,0 +1,190 @@
+/* styles.css */
+
+body {
+    background-image: url('image.jpg') !important; /* Set the background image */
+    background-size: cover !important;
+    background-position: center center !important;
+    background-repeat: no-repeat !important;
+    background-attachment: fixed !important;
+    font-size: 2.4rem; /* Doubled from 1.2rem */
+}
+.gradio-container {
+    background-color: rgba(0, 0, 0, 0.8) !important; /* Semi-transparent black container */
+    color: #FFFFFF !important; /* Default text color to white */
+    max-width: 850px; /* Reverted from 1700px */
+    margin: 30px auto !important; /* Reverted from 60px auto */
+    border-radius: 12px; /* Reverted from 24px */
+    border: 2px solid #444; /* Doubled from 1px - keeping border size large */
+}
+.gr-panel {
+    background-color: #282828 !important; /* Dark grey for panels */
+    border-color: #444 !important;
+    box-shadow: none !important;
+}
+
+button.gr-button.lg.primary { /* More specific selector for primary submit */
+    background-color: #1DB954 !important;
+    color: white !important;
+    font-size: 2.1rem; /* Doubled from 1.05rem */
+}
+button.gr-button.lg.secondary {
+    background-color: #535353 !important; /* Darker grey */
+    color: white !important;
+    border-color: #777 !important;
+    font-size: 2.1rem; /* Doubled from 1.05rem */
+}
+/* Removed .gr-example-inputs button as gr.Examples is removed */
+
+
+.gr-input textarea {
+    background-color: #3E3E3E !important;
+    color: #FFFFFF !important; /* White text for input */
+    border-color: #535353 !important;
+    font-size: 2.8rem !important; /* Doubled from 1.4rem */
+    padding: 20px; /* Doubled from 10px */
+}
+/* Retained .gr-markdown for general markdown usage, but ensure it doesn't conflict with HTML output */
+.gr-markdown {
+    background-color: transparent !important;
+    border: none !important;
+}
+/* Ensure the description markdown is still styled */
+.gr-description p, .gr-markdown strong {
+    color: #B3B3B3 !important; /* Using the description text color */
+    font-size: 1.5rem !important; /* Reverted from 3.0rem */
+}
+/* General markdown text in other places might also need this if not covered */
+.gr-markdown p {
+    color: #FFFFFF !important; /* Default markdown text to white */
+    font-size: 2.6rem !important;
+}
+
+
+.gr-dataframe {
+    border: 2px solid #444 !important; /* Doubled from 1px */
+    background-color: #282828 !important;
+}
+.gr-dataframe th {
+    background-color: #3E3E3E !important;
+    color: #FFFFFF !important;
+    font-size: 2.0rem; /* Doubled from 1.0rem */
+}
+.gr-dataframe td {
+    color: #DCDCDC !important;
+    border-color: #444 !important;
+    font-size: 2.4rem !important; /* Doubled from 1.2rem */
+}
+
+h1.gr-title {
+    color: #FFFFFF !important;
+    text-align: center;
+    font-size: 8.0rem !important; /* Doubled from 4.0rem */
+}
+.gr-description {
+    color: #B3B3B3 !important;
+    text-align: center;
+    font-size: 1.5rem !important; /* Reverted from 3.0rem */
+}
+footer { visibility: hidden !important; }
+
+
+#emotion_prob_label {
+    color: #FFFFFF !important;
+    font-weight: bold;
+    font-size: 2.4rem !important; /* Doubled from 1.2rem */
+}
+.gr-input > label > span.label-text,
+.gr-output > label > span.label-text,
+/* Targeting gr.HTML specifically if it has a label, otherwise these might not apply */
+.gr-html > label > span.label-text,
+.gr-dataframe > label > span.label-text {
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
+    font-size: 2.6rem !important; /* Doubled from 1.3rem */
+}
+
+/* New CSS for Emotion Probabilities Progress Bars - Targeted with #emotion-output-display */
+#emotion-output-display .emotion-probabilities-container {
+    padding: 15px !important;
+    background-color: #282828 !important;
+    border-radius: 12px !important;
+    margin-top: 15px !important;
+    border: 1px solid #444 !important;
+}
+
+#emotion-output-display .emotion-item-wrapper {
+    display: flex !important; /* Changed back to flex */
+    align-items: center !important; /* Vertically align items */
+    margin-bottom: 8px !important;
+    gap: 10px !important; /* Gap between text group and bar */
+    flex-wrap: nowrap !important; /* Prevent wrapping */
+}
+
+#emotion-output-display .emotion-text-details {
+    display: flex !important;
+    flex-direction: row !important; /* Keep emotion name and percentage on same line */
+    align-items: baseline !important;
+    /* Allow it to shrink and grow based on content, but try to keep it compact */
+    flex-shrink: 1;
+    flex-grow: 0;
+    min-width: unset !important; /* Remove fixed min-width for flexible start */
+}
+
+#emotion-output-display .emotion-name {
+    color: #FFFFFF !important;
+    font-size: 2.0rem !important;
+    font-weight: 500 !important;
+    white-space: nowrap !important;
+    margin-right: 8px !important; /* Space between name and percentage */
+}
+
+#emotion-output-display .probability-text {
+    color: #DCDCDC !important;
+    font-weight: normal !important;
+    font-size: 1.6rem !important;
+    white-space: nowrap !important;
+}
+
+#emotion-output-display .progress-bar-container {
+    flex-grow: 1 !important; /* Allows bar to take remaining space */
+    height: 16px !important; /* Keep bar height small */
+    background-color: #535353 !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    position: relative !important;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.2) !important;
+    min-width: 80px !important; /* Ensure a minimum width for the bar to be visible */
+}
+
+#emotion-output-display .progress-bar-fill {
+    height: 100% !important;
+    background-color: #1DB954 !important;
+    border-radius: 8px !important;
+    transition: width 0.6s ease-in-out !important;
+}
+
+
+/* Responsive adjustments for progress bars */
+@media (max-width: 768px) {
+    #emotion-output-display .emotion-item-wrapper {
+        flex-direction: row !important; /* Keep as row for mobile to keep emotion and percentage inline */
+        align-items: center !important;
+        margin-bottom: 10px !important;
+        flex-wrap: wrap !important; /* Allow wrapping on small screens */
+    }
+    #emotion-output-display .emotion-text-details {
+        flex-direction: row !important;
+        align-items: baseline !important;
+        margin-bottom: 0 !important; /* Remove margin-bottom when wrapping is allowed on item wrapper */
+    }
+    #emotion-output-display .emotion-name {
+        font-size: 1.8rem !important;
+        margin-right: 5px !important;
+    }
+    #emotion-output-display .probability-text {
+        font-size: 1.4rem !important;
+    }
+    #emotion-output-display .progress-bar-container {
+        width: 100% !important; /* Full width for bar on small screens */
+    }
+}
