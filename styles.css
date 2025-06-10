@@ -142,13 +142,13 @@ footer { visibility: hidden !important; }
 
 #emotion-output-display .progress-bar-container {
     flex-grow: 1 !important;
-    height: 16px !important;
+    height: 8px !important;
     background-color: #535353 !important;
-    border-radius: 8px !important;
+    border-radius: 6px !important;
     overflow: hidden !important;
     position: relative !important;
     box-shadow: inset 0 1px 2px rgba(0,0,0,0.2) !important;
-    min-width: 80px !important;
+    min-width: 20px !important; 
 }
 
 #emotion-output-display .progress-bar-fill {
@@ -229,4 +229,3 @@ footer { visibility: hidden !important; }
     font-style: italic;
     font-size: 1.8rem !important; /* Adjusted font size */
 }
-
