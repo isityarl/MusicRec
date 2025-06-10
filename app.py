@@ -173,8 +173,8 @@ class SentimentPipeline:
                 prob_details_html += f"""
                 <div class='emotion-item-wrapper'>
                     <div class='emotion-text-details'>
-                        <span class='emotion-name'>{emotion.capitalize()}:</span>
-                        <span class='probability-text'>{percentage:.2f}%</span>
+                        <span class='emotion-name' style='font-size: 1.6rem !important;'>{emotion.capitalize()}:</span>
+                        <span class='probability-text' style='font-size: 1.2rem !important;'>{percentage:.2f}%</span>
                     </div>
                     <div class='progress-bar-container'>
                         <div class='progress-bar-fill' style='width: {percentage}%;'></div>
