@@ -181,9 +181,6 @@ class SentimentPipeline:
 
         return predicted_emotions_list, probabilities, prob_details_html
 
-
-
-
 class MusicDatabase:
     """Loads and manages music rules and song features."""
     def __init__(self, dataset_hf_id, emotion_rules_filename, songs_db_filename):
