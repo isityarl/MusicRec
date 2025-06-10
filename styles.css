@@ -1,89 +1,87 @@
 /* styles.css */
 
 body {
-    background-image: url('image.jpg') !important; /* Set the background image */
+    background-image: url('image.jpg') !important;
     background-size: cover !important;
     background-position: center center !important;
     background-repeat: no-repeat !important;
     background-attachment: fixed !important;
-    font-size: 2.4rem; /* Doubled from 1.2rem */
+    font-size: 2.4rem;
 }
 .gradio-container {
-    background-color: rgba(0, 0, 0, 0.8) !important; /* Semi-transparent black container */
-    color: #FFFFFF !important; /* Default text color to white */
-    max-width: 850px; /* Reverted from 1700px */
-    margin: 30px auto !important; /* Reverted from 60px auto */
-    border-radius: 12px; /* Reverted from 24px */
-    border: 2px solid #444; /* Doubled from 1px - keeping border size large */
+    background-color: rgba(0, 0, 0, 0.8) !important;
+    color: #FFFFFF !important;
+    max-width: 850px;
+    margin: 30px auto !important;
+    border-radius: 12px;
+    border: 2px solid #444;
 }
 .gr-panel {
-    background-color: #282828 !important; /* Dark grey for panels */
+    background-color: #282828 !important;
     border-color: #444 !important;
     box-shadow: none !important;
 }
 
-button.gr-button.lg.primary { /* More specific selector for primary submit */
+button.gr-button.lg.primary {
     background-color: #1DB954 !important;
     color: white !important;
-    font-size: 2.1rem; /* Doubled from 1.05rem */
+    font-size: 2.1rem;
 }
 button.gr-button.lg.secondary {
-    background-color: #535353 !important; /* Darker grey */
+    background-color: #535353 !important;
     color: white !important;
     border-color: #777 !important;
-    font-size: 2.1rem; /* Doubled from 1.05rem */
+    font-size: 2.1rem;
 }
-/* Removed .gr-example-inputs button as gr.Examples is removed */
-
 
 .gr-input textarea {
     background-color: #3E3E3E !important;
-    color: #FFFFFF !important; /* White text for input */
+    color: #FFFFFF !important;
     border-color: #535353 !important;
-    font-size: 2.8rem !important; /* Doubled from 1.4rem */
-    padding: 20px; /* Doubled from 10px */
+    font-size: 2.8rem !important;
+    padding: 20px;
 }
-/* Retained .gr-markdown for general markdown usage, but ensure it doesn't conflict with HTML output */
+
 .gr-markdown {
     background-color: transparent !important;
     border: none !important;
 }
-/* Ensure the description markdown is still styled */
+
 .gr-description p, .gr-markdown strong {
-    color: #B3B3B3 !important; /* Using the description text color */
-    font-size: 1.5rem !important; /* Reverted from 3.0rem */
+    color: #B3B3B3 !important;
+    font-size: 1.5rem !important;
 }
-/* General markdown text in other places might also need this if not covered */
+
 .gr-markdown p {
-    color: #FFFFFF !important; /* Default markdown text to white */
+    color: #FFFFFF !important;
     font-size: 2.6rem !important;
 }
 
 
 .gr-dataframe {
-    border: 2px solid #444 !important; /* Doubled from 1px */
+    border: 2px solid #444 !important;
     background-color: #282828 !important;
 }
 .gr-dataframe th {
     background-color: #3E3E3E !important;
     color: #FFFFFF !important;
-    font-size: 2.0rem; /* Doubled from 1.0rem */
+    font-size: 2.0rem;
 }
 .gr-dataframe td {
     color: #DCDCDC !important;
     border-color: #444 !important;
-    font-size: 2.4rem !important; /* Doubled from 1.2rem */
+    font-size: 2.4rem !important;
 }
 
 h1.gr-title {
     color: #FFFFFF !important;
     text-align: center;
-    font-size: 8.0rem !important; /* Doubled from 4.0rem */
+    font-size: 8.0rem !important;
 }
 .gr-description {
     color: #B3B3B3 !important;
     text-align: center;
-    font-size: 1.5rem !important; /* Reverted from 3.0rem */
+    font-size: 1.5rem !important;
 }
 footer { visibility: hidden !important; }
 
@@ -91,19 +89,17 @@ footer { visibility: hidden !important; }
 #emotion_prob_label {
     color: #FFFFFF !important;
     font-weight: bold;
-    font-size: 2.4rem !important; /* Doubled from 1.2rem */
+    font-size: 2.4rem !important;
 }
 .gr-input > label > span.label-text,
 .gr-output > label > span.label-text,
-/* Targeting gr.HTML specifically if it has a label, otherwise these might not apply */
 .gr-html > label > span.label-text,
 .gr-dataframe > label > span.label-text {
     color: #FFFFFF !important;
     font-weight: 600 !important;
-    font-size: 2.6rem !important; /* Doubled from 1.3rem */
+    font-size: 2.6rem !important;
 }
 
-/* New CSS for Emotion Probabilities Progress Bars - Targeted with #emotion-output-display */
 #emotion-output-display .emotion-probabilities-container {
     padding: 15px !important;
     background-color: #282828 !important;
@@ -113,21 +109,20 @@ footer { visibility: hidden !important; }
 }
 
 #emotion-output-display .emotion-item-wrapper {
-    display: flex !important; /* Changed back to flex */
-    align-items: center !important; /* Vertically align items */
+    display: flex !important;
+    align-items: center !important;
     margin-bottom: 8px !important;
-    gap: 10px !important; /* Gap between text group and bar */
-    flex-wrap: nowrap !important; /* Prevent wrapping */
+    gap: 10px !important;
+    flex-wrap: nowrap !important;
 }
 
 #emotion-output-display .emotion-text-details {
     display: flex !important;
-    flex-direction: row !important; /* Keep emotion name and percentage on same line */
+    flex-direction: row !important;
     align-items: baseline !important;
-    /* Allow it to shrink and grow based on content, but try to keep it compact */
     flex-shrink: 1;
     flex-grow: 0;
-    min-width: unset !important; /* Remove fixed min-width for flexible start */
+    min-width: unset !important;
 }
 
 #emotion-output-display .emotion-name {
@@ -135,7 +130,7 @@ footer { visibility: hidden !important; }
     font-size: 2.0rem !important;
     font-weight: 500 !important;
     white-space: nowrap !important;
-    margin-right: 8px !important; /* Space between name and percentage */
+    margin-right: 8px !important;
 }
 
 #emotion-output-display .probability-text {
@@ -146,14 +141,14 @@ footer { visibility: hidden !important; }
 }
 
 #emotion-output-display .progress-bar-container {
-    flex-grow: 1 !important; /* Allows bar to take remaining space */
-    height: 16px !important; /* Keep bar height small */
+    flex-grow: 1 !important;
+    height: 16px !important;
     background-color: #535353 !important;
     border-radius: 8px !important;
     overflow: hidden !important;
     position: relative !important;
     box-shadow: inset 0 1px 2px rgba(0,0,0,0.2) !important;
-    min-width: 80px !important; /* Ensure a minimum width for the bar to be visible */
+    min-width: 80px !important;
 }
 
 #emotion-output-display .progress-bar-fill {
@@ -164,18 +159,17 @@ footer { visibility: hidden !important; }
 }
 
 
-/* Responsive adjustments for progress bars */
 @media (max-width: 768px) {
     #emotion-output-display .emotion-item-wrapper {
-        flex-direction: row !important; /* Keep as row for mobile to keep emotion and percentage inline */
+        flex-direction: row !important;
         align-items: center !important;
         margin-bottom: 10px !important;
-        flex-wrap: wrap !important; /* Allow wrapping on small screens */
+        flex-wrap: wrap !important;
     }
     #emotion-output-display .emotion-text-details {
         flex-direction: row !important;
         align-items: baseline !important;
-        margin-bottom: 0 !important; /* Remove margin-bottom when wrapping is allowed on item wrapper */
+        margin-bottom: 0 !important;
     }
     #emotion-output-display .emotion-name {
         font-size: 1.8rem !important;
@@ -185,6 +179,54 @@ footer { visibility: hidden !important; }
         font-size: 1.4rem !important;
     }
     #emotion-output-display .progress-bar-container {
-        width: 100% !important; /* Full width for bar on small screens */
+        width: 100% !important;
     }
 }
+
+/* Spotify Player specific styles - Integrated into the theme */
+.spotify-player-container {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    width: 100%;
+    max-width: 480px; /* Kept this to control player width */
+    margin-left: auto;
+    margin-right: auto;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3); /* Slightly darker shadow for dark theme */
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #333; /* Subtle border for players */
+}
+
+.spotify-player-container iframe {
+    border-radius: 12px;
+    width: 100%;
+    height: 80px;
+    border: none; /* iframe itself shouldn't have an extra border */
+}
+
+#player_section_title {
+    color: #FFFFFF !important; /* Matches overall text color */
+    text-align: center;
+    margin-top: 30px;
+    margin-bottom: 15px;
+    font-size: 2.8rem !important; /* Adjusted to fit the larger font scale */
+    font-weight: bold;
+}
+
+.spotify-players-header {
+    text-align: center;
+    margin-top: 15px;
+    margin-bottom: 10px;
+    color: #DCDCDC !important; /* Slightly lighter for sub-header */
+    font-size: 2.2rem !important; /* Adjusted font size */
+    font-weight: 600;
+}
+
+.no-songs-message {
+    text-align: center;
+    color: #B3B3B3 !important; /* Matches description color */
+    margin-top: 20px;
+    font-style: italic;
+    font-size: 1.8rem !important; /* Adjusted font size */
+}
+

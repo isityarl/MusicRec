@@ -55,7 +55,7 @@ class SpotifyAuthenticator:
 
         auth_str = f"{self.client_id}:{self.client_secret}"
         b64_auth_str = base64.b64encode(auth_str.encode()).decode()
-        token_url = 'https://accounts.spotify.com/api/token'
+        token_url = 'https://accounts.spotify.com/api/token' # Corrected Spotify token endpoint
 
         try:
             response = requests.post(
@@ -108,7 +108,7 @@ class SentimentPipeline:
 
             print(f"Sentiment components loaded successfully from Hugging Face Hub: {self.model_hf_id}")
             if self.model.config.num_labels != len(self.mlb_object.classes_):
-                 print(f"CRITICAL WARNING: Model labels ({self.model.config.num_labels}) != MLB classes ({len(self.mlb_object.classes_)}).")
+                print(f"CRITICAL WARNING: Model labels ({self.model.config.num_labels}) != MLB classes ({len(self.mlb_object.classes_)}).")
         except Exception as e:
             print(f"FATAL: Error loading sentiment components from Hugging Face Hub: {e}")
             raise
@@ -139,8 +139,8 @@ class SentimentPipeline:
         binary_predictions = (probabilities >= threshold).astype(int).reshape(1, -1)
 
         if binary_predictions.shape[1] != len(self.mlb_object.classes_):
-             error_msg = f"Prediction shape mismatch. Model: {binary_predictions.shape[1]}, MLB: {len(self.mlb_object.classes_)}."
-             return [error_msg], probabilities, error_msg
+            error_msg = f"Prediction shape mismatch. Model: {binary_predictions.shape[1]}, MLB: {len(self.mlb_object.classes_)}."
+            return [error_msg], probabilities, error_msg
 
         predicted_emotion_tuples = self.mlb_object.inverse_transform(binary_predictions)
         predicted_emotions_list = list(predicted_emotion_tuples[0]) if predicted_emotion_tuples and predicted_emotion_tuples[0] else []
@@ -162,17 +162,20 @@ class SentimentPipeline:
             emotion_probs_for_html = all_emotion_probs_tuples[:5]
 
 
-        # Generate HTML string for emotion probabilities with new structure
+        # Generate HTML string for emotion probabilities with updated structure
         prob_details_html = "<div class='emotion-probabilities-container'>"
         if not emotion_probs_for_html:
             prob_details_html += "<p>No emotions detected above threshold.</p>"
         else:
             for emotion, prob in emotion_probs_for_html:
                 percentage = round(prob * 100, 2)
+                # No <br> tag here now, handled by CSS
                 prob_details_html += f"""
                 <div class='emotion-item-wrapper'>
-                    <span class='emotion-name'>{emotion.capitalize()}:</span>
-                    <span class='probability-text'>{percentage:.2f}%</span>
+                    <div class='emotion-text-details'>
+                        <span class='emotion-name'>{emotion.capitalize()}:</span>
+                        <span class='probability-text'>{percentage:.2f}%</span>
+                    </div>
                     <div class='progress-bar-container'>
                         <div class='progress-bar-fill' style='width: {percentage}%;'></div>
                     </div>
@@ -243,8 +246,8 @@ class MusicDatabase:
             if 'track_id' not in self.songs_df.columns:
                 print("CRITICAL WARNING: 'track_id' column missing in songs_df.")
             if 'popularity' not in self.songs_df.columns:
-                 print("Warning: 'popularity' column is missing in songs_df. Adding default popularity=0.")
-                 self.songs_df['popularity'] = 0
+                print("Warning: 'popularity' column is missing in songs_df. Adding default popularity=0.")
+                self.songs_df['popularity'] = 0
             else:
                 self.songs_df['popularity'] = self.songs_df['popularity'].fillna(0)
 
@@ -297,8 +300,8 @@ class MusicRecommender:
         if current_filter_df.empty: return pd.DataFrame(columns=['name', 'artists'])
 
         audio_features_in_rules = ['danceability', 'energy', 'valence', 'tempo', 'loudness', 'mode',
-                                   'speechiness', 'acousticness', 'instrumentalness',
-                                   'liveness', 'valence', 'tempo', 'time_signature']
+                                     'speechiness', 'acousticness', 'instrumentalness',
+                                     'liveness', 'valence', 'tempo', 'time_signature']
 
         for feature in audio_features_in_rules:
             min_col, max_col = f"{feature}_Min", f"{feature}_Max"
@@ -312,9 +315,9 @@ class MusicRecommender:
                         if min_val >= 0.5 and max_val >= 0.5:
                             current_filter_df = current_filter_df[current_filter_df[feature] == 1]
                         elif min_val <= 0.5 and max_val <= 0.5:
-                             current_filter_df = current_filter_df[current_filter_df[feature] == 0]
+                            current_filter_df = current_filter_df[current_filter_df[feature] == 0]
                     elif feature == 'time_signature':
-                         current_filter_df = current_filter_df[(current_filter_df[feature].astype(int) >= int(min_val)) & (current_filter_df[feature].astype(int) <= int(max_val))]
+                        current_filter_df = current_filter_df[(current_filter_df[feature].astype(int) >= int(min_val)) & (current_filter_df[feature].astype(int) <= int(max_val))]
                     else:
                         current_filter_df = current_filter_df[(current_filter_df[feature] >= min_val) & (current_filter_df[feature] <= max_val)]
 
@@ -342,19 +345,10 @@ class MusicRecommender:
         num_to_sample = min(num_recommendations, len(current_filter_df))
         recommended_sample = current_filter_df.head(num_to_sample) if num_to_sample > 0 else pd.DataFrame()
 
-        output_df = pd.DataFrame(columns=['Track Name', 'Artists'])
-        if not recommended_sample.empty:
-            temp_df = pd.DataFrame()
-            if 'name' in recommended_sample.columns:
-                temp_df['Track Name'] = recommended_sample['name']
-            else:
-                temp_df['Track Name'] = "N/A"
-
-            if 'artists' in recommended_sample.columns:
-                temp_df['Artists'] = recommended_sample['artists']
-            else:
-                temp_df['Artists'] = "N/A"
-            output_df = temp_df
+        # Ensure that the returned DataFrame includes 'track_id' for the Spotify player
+        output_cols = ['name', 'artists', 'track_id']
+        output_df = recommended_sample[output_cols] if not recommended_sample.empty and all(col in recommended_sample.columns for col in output_cols) else pd.DataFrame(columns=output_cols)
+        output_df = output_df.rename(columns={'name': 'Track Name', 'artists': 'Artists'})
 
         return output_df
 
@@ -388,19 +382,20 @@ class GradioApp:
     def get_recommendations_interface(self, text_input):
         if not self.is_app_initialized:
             # Modified return to include empty string for HTML output
-            return "", pd.DataFrame(columns=['Track Name', 'Artists'])
+            return "", pd.DataFrame(columns=['Track Name', 'Artists', 'track_id']), ""
         if not text_input or not text_input.strip():
-            return "Please enter text.", pd.DataFrame(columns=['Track Name', 'Artists'])
+            return "Please enter text.", pd.DataFrame(columns=['Track Name', 'Artists', 'track_id']), ""
 
         # predicted_emotions, _, prob_details_str = self.sentiment_pipeline.predict_emotions(text_input)
         # Modified to get the HTML string for probabilities directly
         predicted_emotions, _, prob_details_html = self.sentiment_pipeline.predict_emotions(text_input)
 
 
-        df_headers_for_ui = ['Track Name', 'Artists']
+        # Ensure track_id is included in the DataFrame passed to the UI for player embedding
+        df_headers_for_ui = ['Track Name', 'Artists', 'track_id']
 
         if not predicted_emotions or ("Error:" in predicted_emotions[0] and len(predicted_emotions) == 1):
-            return prob_details_html, pd.DataFrame(columns=df_headers_for_ui)
+            return prob_details_html, pd.DataFrame(columns=df_headers_for_ui), "" # Return empty string for player HTML
 
         recommended_songs_df = self.music_recommender.recommend_music(
             predicted_emotions,
@@ -412,10 +407,57 @@ class GradioApp:
         if recommended_songs_df.empty:
             recommended_songs_df = pd.DataFrame(columns=df_headers_for_ui)
         else:
-            cols_to_show_in_gradio = [col for col in df_headers_for_ui if col in recommended_songs_df.columns]
-            recommended_songs_df = recommended_songs_df[cols_to_show_in_gradio]
+            # Ensure 'track_id' is always present in the DataFrame returned to Gradio UI, even if not shown
+            cols_to_return = [col for col in ['Track Name', 'Artists', 'track_id'] if col in recommended_songs_df.columns]
+            recommended_songs_df = recommended_songs_df[cols_to_return]
 
-        return prob_details_html, recommended_songs_df
+
+        print("\n--- Debugging Spotify Players ---")
+        print("Recommended songs DataFrame before player generation:")
+        print(recommended_songs_df[['Track Name', 'Artists', 'track_id']].to_string()) # Print selected columns for brevity
+        print("--- End Debug ---")
+        # --- Generate Spotify Player HTML ---
+        spotify_players_html_list = []
+
+        if not recommended_songs_df.empty:
+            # Optional custom header for the player section
+            spotify_players_html_list.append("<h4 class='spotify-players-header'>Listen Now:</h4>")
+
+        for index, row in recommended_songs_df.iterrows():
+            if 'track_id' in row and pd.notna(row['track_id']):
+                track_id = row['track_id']
+                # Use .get() with a default value to avoid KeyError if 'name' or 'artists' are unexpectedly missing
+                track_name = row.get('Track Name', 'Unknown Track')
+                artists = row.get('Artists', 'Unknown Artist')
+
+                # This is the CORRECT Spotify embed URL format
+                spotify_embed_url = f"https://open.spotify.com/embed/track/{track_id}"
+
+                # Construct the HTML for a single Spotify iframe player
+                player_html = f"""
+                <div class='spotify-player-container'>
+                    <iframe title="Spotify Web Player for {track_name} by {artists}"
+                            style="border-radius:12px; width:100%;"
+                            src="{spotify_embed_url}"
+                            height="80"
+                            frameBorder="0"
+                            allowfullscreen=""
+                            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                            loading="lazy">
+                    </iframe>
+                </div>
+                """
+                spotify_players_html_list.append(player_html)
+
+        # Join all player HTML strings into one combined string
+        full_spotify_players_html = "\n".join(spotify_players_html_list)
+
+        # If no players were added (e.g., no track_ids), provide a fallback message
+        if not full_spotify_players_html or len(recommended_songs_df) == 0:
+            full_spotify_players_html = "<p class='no-songs-message'>No playable Spotify tracks found for the recommendations.</p>"
+
+        # Return all three outputs: emotion HTML, recommended DataFrame, Spotify player HTML
+        return prob_details_html, recommended_songs_df[['Track Name', 'Artists']], full_spotify_players_html
 
     def launch(self):
         # Read CSS from the external file
@@ -446,15 +488,12 @@ class GradioApp:
             )
             with gr.Row():
                 clear_button = gr.ClearButton(value="Clear", variant="secondary")
-                submit_button = gr.Button("Submit", variant="primary")
-                # New "Example" button
+                # Reverted back to individual buttons and ordered them as requested
                 example_button = gr.Button("Example", variant="secondary")
+                submit_button = gr.Button("Submit", variant="primary")
 
-
-            # Removed gr.Examples block as per new requirement
 
             gr.Markdown("### Emotion Probabilities:", elem_id="emotion_prob_label")
-            # Changed to gr.HTML for custom styling of probabilities, added elem_id for specific CSS targeting
             emotion_output_html = gr.HTML(elem_id="emotion-output-display")
 
             recommendation_df_output = gr.DataFrame(
@@ -465,14 +504,23 @@ class GradioApp:
                 col_count=(2,"fixed")
             )
 
+            # --- NEW: Spotify Player HTML Output Component ---
+            gr.Markdown("<h3>🎧 Play Recommended Tracks:</h3>", elem_id="player_section_title")
+            spotify_player_html_output = gr.HTML(elem_id="spotify-players-container")
+            # --- END NEW COMPONENT ---
+
+
+            # Re-wired click events for individual buttons
             submit_button.click(
                 fn=self.get_recommendations_interface,
                 inputs=[text_input],
-                outputs=[emotion_output_html, recommendation_df_output] # Updated output to emotion_output_html
+                outputs=[emotion_output_html, recommendation_df_output, spotify_player_html_output] # Added spotify_player_html_output
             )
-            clear_button.click(lambda: (None, pd.DataFrame(columns=['Track Name', 'Artists'])), outputs=[emotion_output_html, recommendation_df_output]) # Updated output to emotion_output_html
-
-            # Link the new example_button to update the text_input
+            clear_button.click(
+                # Added empty string for the new spotify_player_html_output
+                lambda: (None, pd.DataFrame(columns=['Track Name', 'Artists']), ""),
+                outputs=[emotion_output_html, recommendation_df_output, spotify_player_html_output]
+            )
             example_button.click(
                 fn=self.get_random_example_text,
                 inputs=[],
