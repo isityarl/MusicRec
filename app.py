@@ -350,12 +350,18 @@ class GradioApp:
 
         # Define example texts for the "Example" button
         self.example_texts = [
-            "[EN] I feel ecstatic and overjoyed by this news!",
-            "[RU] Это очень печально и вызывает у меня тревогу.",
-            "[KZ] Бүгін менің көңіл-күйім тамаша, жаңа ән тыңдағым келеді!",
-            "I am feeling quite down and disappointed.",
-            "[RU] Какая прекрасная погода, хочется гулять и слушать музыку!",
-            "[KZ] Мен қатты шаршадым, біраз демалғым келеді."
+            "I can't believe I got the job, I am absolutely thrilled!",
+            "Это очень печально и вызывает у меня тревогу.",
+            "Бүгін менің көңіл-күйім тамаша, жаңа ән тыңдағым келеді!",
+            "This performance is breathtaking, I'm in complete awe of their talent.",
+            "Какая смешная шутка, я не могу перестать смеяться!",
+            "The train has been delayed again, this is so frustrating and annoying!",
+            "Мен қатты шаршадым, біраз демалғым келеді.",
+            "Спасибо вам огромное за вашу помощь и поддержку!",
+            "I'm very curious what will happen next in this story.",
+            "Осыны күтпеп едім, қандай тосын сый!",
+            "I studied so hard for the test but still failed. I feel so down.",
+            "Бұл әділетсіздік менің ашуыма тиді."
         ]
 
     def get_random_example_text(self):
