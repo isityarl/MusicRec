@@ -446,7 +446,7 @@ class GradioApp:
             
             text_input = gr.Textbox(
                 lines=4,
-                placeholder="Write how u feel here",
+                placeholder="Write how u feel here (English | Russian | Kazakh)",
                 label="Your text:"
             )
             with gr.Row():
