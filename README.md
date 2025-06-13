@@ -17,11 +17,10 @@ This application analyzes the sentiment and emotions in your text and recommends
 
 This project relies on two key datasets:
 
-- EmotionWithFeatures.csv link:
-  `https://drive.google.com/uc?export=download&id=117IlQgcVEER4ky6W9Xfq1PZm423vD3D8`
-
-- MusicsUpdated.csv link:  
-  `https://drive.google.com/uc?export=download&id=1vsO22qT8dRVtOnjtp0DWRa7BRWFkYuHz`
+- **Emotion Rules**: [EmotionWithFeatures.csv](https://drive.google.com/uc?export=download&id=117IlQgcVEER4ky6W9Xfq1PZm423vD3D8)
+- **Songs Database**: [MusicsUpdated.csv](https://drive.google.com/uc?export=download&id=1vsO22qT8dRVtOnjtp0DWRa7BRWFkYuHz)
 
 ---
+## Ready version
 
+You can try the live application here: [huggingface.co/spaces/yarlspace/music_recommender](https://huggingface.co/spaces/yarlspace/music_recommender)
