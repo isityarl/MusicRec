@@ -443,15 +443,10 @@ class GradioApp:
 
         with gr.Blocks(theme=gr.themes.Base(), css=css_app_dark_theme) as demo:
             gr.Markdown("<h1>🎤 Sentiment-Driven Multilingual Music Recommender 🎧</h1>", elem_classes="gr-title")
-            gr.Markdown(
-                "Enter your text in English, Russian, or Kazakh (e.g., [EN] I'm happy!). "
-                "The system will analyze your emotions and recommend music based on your mood.",
-                elem_classes="gr-description"
-            )
-
+            
             text_input = gr.Textbox(
                 lines=4,
-                placeholder="E.g., '[EN] I'm so happy today!' or '[RU] Мне очень грустно.' or '[KZ] Көңіл-күйім тамаша!'...",
+                placeholder="Write how u fill here",
                 label="Your text:"
             )
             with gr.Row():
