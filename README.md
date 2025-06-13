@@ -24,3 +24,5 @@ This project relies on two key datasets:
 ## Ready version
 
 You can try the live application here: [huggingface.co/spaces/yarlspace/music_recommender](https://huggingface.co/spaces/yarlspace/music_recommender)
+
+![image](https://github.com/user-attachments/assets/b5a3ecb6-5b7a-4b87-9e5f-6de0974d6f29)
